@@ -1,0 +1,45 @@
+const API_URL = "http://localhost:8000";
+const form = document.getElementById("predictForm");
+const errorBox = document.getElementById("error");
+const resultBox = document.getElementById("result");
+const button = document.getElementById("predictBtn");
+function bandFor(value) {
+  if (value <= 30) return ["Good", "Lower PM2.5 level"];
+  if (value <= 60) return ["Satisfactory", "Moderate particulate level"];
+  if (value <= 90) return ["Moderate", "Elevated particulate level"];
+  if (value <= 120) return ["Poor", "High particulate level"];
+  if (value <= 250) return ["Very Poor", "Very high particulate level"];
+  return ["Severe", "Extremely high particulate level"];
+}
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  errorBox.classList.add("hidden");
+  resultBox.classList.add("hidden");
+  button.disabled = true;
+  button.textContent = "Predicting…";
+  const body = {
+    pm25_lag_1: Number(document.getElementById("pm").value),
+    at: Number(document.getElementById("at").value),
+    rh: Number(document.getElementById("rh").value)
+  };
+  try {
+    const response = await fetch(`${API_URL}/predict`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(body)
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || "Prediction request failed.");
+    const [label, note] = bandFor(data.prediction);
+    resultBox.innerHTML = `<div><div class="label">3-HOUR PREDICTION</div><strong>${Number(data.prediction).toFixed(1)} <small>µg/m³</small></strong></div><div class="band"><b>${label}</b><small>${note}</small></div>`;
+    resultBox.classList.remove("hidden");
+  } catch (err) {
+    errorBox.textContent = err.message.includes("Failed to fetch")
+      ? "Cannot reach the API. Start the FastAPI backend on port 8000."
+      : err.message;
+    errorBox.classList.remove("hidden");
+  } finally {
+    button.disabled = false;
+    button.innerHTML = "✧ &nbsp; Predict PM2.5 <span>↗</span>";
+  }
+});

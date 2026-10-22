@@ -1,0 +1,113 @@
+from pathlib import Path
+
+import joblib
+import numpy as np
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+
+MODEL_PATH = Path(__file__).resolve().parent / "model_bundle.joblib"
+
+app = FastAPI(title="AirScope PM2.5 Prediction API", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+        "null",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+class PredictionInput(BaseModel):
+    pm25_lag_1: float = Field(ge=0, le=2000)
+    at: float = Field(ge=-30, le=65)
+    rh: float = Field(ge=0, le=100)
+
+
+def rule_activations(X, centers, log_widths):
+    n_inputs = X.shape[1]
+    n_rules = 2 ** n_inputs
+    widths = np.exp(log_widths) + 1e-4
+
+    memberships = np.exp(
+        -0.5 * (
+            (X[:, :, None] - centers[None, :, :])
+            / widths[None, :, :]
+        ) ** 2
+    )
+
+    combinations = np.array([
+        [(r >> j) & 1 for j in range(n_inputs)]
+        for r in range(n_rules)
+    ])
+
+    firing = np.ones((len(X), n_rules))
+    for r, combo in enumerate(combinations):
+        for j in range(n_inputs):
+            firing[:, r] *= memberships[:, j, combo[j]]
+
+    firing /= firing.sum(axis=1, keepdims=True) + 1e-12
+    return firing
+
+
+def design_matrix(X, firing):
+    augmented = np.column_stack([np.ones(len(X)), X])
+    return np.einsum("nr,ni->nri", firing, augmented).reshape(len(X), -1)
+
+
+def infer(bundle, raw_features):
+    features = list(bundle["features"])
+    expected = ["PM25_lag_1", "AT", "RH"]
+    if features != expected:
+        raise ValueError(f"Expected feature order {expected}; got {features}")
+
+    scaler = bundle["scaler"]
+    centers = np.asarray(bundle["centers"], dtype=float)
+    log_widths = np.asarray(bundle["log_widths"], dtype=float)
+    coefficients = np.asarray(bundle["coefficients"], dtype=float)
+
+    X = scaler.transform(np.asarray(raw_features, dtype=float).reshape(1, -1))
+    firing = rule_activations(X, centers, log_widths)
+    design = design_matrix(X, firing)
+
+    if design.shape[1] != coefficients.size:
+        raise ValueError(
+            f"Design has {design.shape[1]} terms; "
+            f"expected {coefficients.size} coefficients."
+        )
+
+    prediction = float((design @ coefficients)[0])
+    if not np.isfinite(prediction):
+        raise ValueError("Model returned a non-finite prediction.")
+    return prediction
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "model_loaded": MODEL_PATH.is_file()}
+
+
+@app.post("/predict")
+def predict(payload: PredictionInput):
+    if not MODEL_PATH.is_file():
+        raise HTTPException(status_code=503, detail="Model bundle is missing.")
+
+    try:
+        bundle = joblib.load(MODEL_PATH)
+        value = infer(
+            bundle,
+            [payload.pm25_lag_1, payload.at, payload.rh],
+        )
+        return {
+            "prediction": value,
+            "horizon_hours": 3,
+            "unit": "µg/m³",
+            "model": "ANFIS",
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {exc}") from exc

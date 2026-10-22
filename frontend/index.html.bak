@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AirScope | PM2.5 Forecast</title><link rel="stylesheet" href="style.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand"><div class="brandmark">〰</div><div><b>AirScope</b><small>ENVIRONMENTAL INTELLIGENCE</small></div></div>
+  <p class="navlabel">WORKSPACE</p><div class="nav active">◉ &nbsp; Forecast dashboard</div><div class="nav muted">⌁ &nbsp; Model performance <small>SOON</small></div><div class="nav muted">⌖ &nbsp; Monitoring stations <small>SOON</small></div>
+  <div class="sidebottom"><div class="modelchip"><i></i><div><b>ANFIS model</b><small>3-hour forecast horizon</small></div></div><p>Research prototype · Delhi dataset</p></div>
+</aside>
+<main>
+<header><div class="crumb">Workspace <span>/</span> Forecast dashboard</div><div class="topstatus"><i></i> MODEL WORKSPACE <div class="avatar">AS</div></div></header>
+<section class="heading"><div><div class="eyebrow">✧ AIR QUALITY INTELLIGENCE</div><h1>PM2.5 Forecast <span>Dashboard</span></h1><p>Predict particulate levels 3 hours ahead using your neuro-fuzzy model.</p></div><div class="location">⌖ &nbsp; Delhi, India &nbsp;⌄</div></section>
+<section class="metrics">
+ <article class="metric"><div>Latest PM2.5 input <b>〰</b></div><strong>82 <small>µg/m³</small></strong><p>Example value · editable below</p></article>
+ <article class="metric"><div>Forecast horizon <b>◷</b></div><strong>3 <small>hours</small></strong><p>Short-term prediction</p></article>
+ <article class="metric"><div>Prediction engine <b>⌘</b></div><strong>ANFIS</strong><p>Adaptive neuro-fuzzy system</p></article>
+ <article class="metric"><div>Baseline R² <b>⌁</b></div><strong>0.372</strong><p>Current ANFIS test result</p></article>
+</section>
+<section class="content">
+ <article class="panel">
+  <div class="panelhead"><div><div class="eyebrow">RUN A FORECAST</div><h2>Environmental inputs</h2></div><div class="panelicon">⌘</div></div>
+  <p class="desc">Enter the latest observed values. The API will pass them to your trained ANFIS model.</p>
+  <form id="predictForm">
+   <label for="pm">Most recent PM2.5 <span>µg/m³</span></label><div class="inputwrap"><span>〰</span><input id="pm" name="pm25_lag_1" type="number" min="0" step="any" value="82" required><em>PM2.5</em></div>
+   <div class="two">
+    <div><label for="at">Air temperature <span>°C</span></label><div class="inputwrap"><span>♨</span><input id="at" name="at" type="number" step="any" value="29" required></div></div>
+    <div><label for="rh">Relative humidity <span>%</span></label><div class="inputwrap"><span>◌</span><input id="rh" name="rh" type="number" min="0" max="100" step="any" value="54" required></div></div>
+   </div>
+   <p class="hint">ⓘ Use the same units and preprocessing as the training dataset.</p>
+   <button id="predictBtn" type="submit">✧ &nbsp; Predict PM2.5 <span>↗</span></button>
+  </form>
+  <div id="error" class="error hidden"></div><div id="result" class="result hidden"></div>
+  <div class="connection"><i></i> Connects to local prediction API when backend is running</div>
+ </article>
+ <article class="panel chartpanel">
+  <div class="panelhead"><div><div class="eyebrow">ILLUSTRATIVE TREND</div><h2>PM2.5 over 24 hours</h2></div><button class="smallbtn">Today ⌄</button></div>
+  <div class="chartmeta"><span><i></i> Illustrative readings</span><b>DEMO DATA</b></div>
+  <div class="chart"><svg viewBox="0 0 620 240" preserveAspectRatio="none" aria-label="Illustrative PM2.5 chart"><defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#48d8b3" stop-opacity=".25"/><stop offset="1" stop-color="#48d8b3" stop-opacity="0"/></linearGradient></defs><g class="gridlines"><path d="M38 25H610 M38 70H610 M38 115H610 M38 160H610 M38 205H610"/></g><g class="labels"><text x="4" y="29">150</text><text x="4" y="74">120</text><text x="10" y="119">90</text><text x="10" y="164">60</text><text x="10" y="209">30</text><text x="38" y="230">00:00</text><text x="175" y="230">06:00</text><text x="320" y="230">12:00</text><text x="460" y="230">18:00</text><text x="570" y="230">24:00</text></g><path class="area" d="M38 157 L76 142 L114 126 L152 88 L190 110 L228 65 L266 92 L304 126 L342 100 L380 140 L418 118 L456 80 L494 105 L532 135 L570 95 L610 120 L610 205 L38 205Z"/><path class="line" d="M38 157 L76 142 L114 126 L152 88 L190 110 L228 65 L266 92 L304 126 L342 100 L380 140 L418 118 L456 80 L494 105 L532 135 L570 95 L610 120"/></svg></div>
+  <div class="chartnote">ⓘ Demo values only — connect historical data to show actual trends.</div>
+  <div class="chartstats"><div><small>Dataset</small><b>Delhi processed CSV</b></div><div><small>Forecast type</small><b>3-hour ahead</b></div></div>
+ </article>
+</section>
+<section class="bottom"><article><div class="bottomicon">⌘</div><div><b>Neuro-fuzzy prediction</b><p>ANFIS combines fuzzy membership functions with learned consequent parameters.</p></div><span>↗</span></article><article><div class="bottomicon blue">⌁</div><div><b>Baseline comparison</b><p>Current experiment: Random Forest R² 0.424 vs ANFIS R² 0.372.</p></div><span>↗</span></article></section>
+<footer>AirScope Research Prototype <span>·</span> PM2.5 values are model estimates, not official air-quality advisories.</footer>
+</main><script src="app.js"></script>
+</body></html>
